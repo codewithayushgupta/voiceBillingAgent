@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef } from 'react';
-import { SpeechRecognition } from '@capacitor-community/speech-recognition';
-import { Capacitor } from '@capacitor/core';
+import { useState, useCallback, useRef } from "react";
+import { SpeechRecognition } from "@capacitor-community/speech-recognition";
+import { Capacitor } from "@capacitor/core";
 
 interface UseSpeechRecognitionProps {
   onResult: (transcript: string, mode: string) => void;
@@ -15,9 +15,10 @@ export function useSpeechRecognition({
 }: UseSpeechRecognitionProps) {
   const [listening, setListening] = useState(false);
   const [available, setAvailable] = useState(false);
-  const currentModeRef = useRef('items');
+  const currentModeRef = useRef("items");
   const recognitionRef = useRef<any>(null);
-  const lastTranscriptRef = useRef(''); // Track last transcript to avoid duplicates
+  const lastTranscriptRef = useRef("");
+  const shouldRestartRef = useRef(false);
 
   const checkAvailability = useCallback(async () => {
     try {
@@ -25,79 +26,95 @@ export function useSpeechRecognition({
         const { available } = await SpeechRecognition.available();
         setAvailable(available);
 
-        if (available) {
-          const { granted } = await SpeechRecognition.requestPermissions();
-          return granted;
+        if (!available) {
+          console.warn("Speech recognition not available on this device");
+          return false;
         }
-        return false;
+
+        const permissionResult: any =
+          await SpeechRecognition.requestPermissions();
+        console.log("Speech permission result:", permissionResult);
+
+        const granted =
+          permissionResult?.speechRecognition === "granted" ||
+          permissionResult?.permission === "granted" ||
+          permissionResult?.granted === true;
+
+        if (!granted) {
+          alert(
+            "Microphone permission denied. Please enable it manually from Settings → App Permissions."
+          );
+        }
+
+        return granted;
       } else {
-        // Web fallback
         const isAvailable =
-          'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+          "webkitSpeechRecognition" in window || "SpeechRecognition" in window;
         setAvailable(isAvailable);
         return isAvailable;
       }
     } catch (error) {
-      console.error('Speech recognition check failed:', error);
+      console.error("Speech recognition permission check failed:", error);
       return false;
     }
   }, []);
 
   const startListening = useCallback(
-    async (mode = 'items') => {
+    async (mode = "items") => {
       currentModeRef.current = mode;
-      lastTranscriptRef.current = ''; // Reset on start
-      
-      const hasPermission = await checkAvailability();
+      lastTranscriptRef.current = "";
 
+      const hasPermission = await checkAvailability();
       if (!hasPermission) {
-        alert('Microphone permission denied. Please enable it in settings.');
+        alert("Microphone permission denied. Please enable it in settings.");
         return;
       }
 
       try {
         if (Capacitor.isNativePlatform()) {
-          // Native platform
+          await SpeechRecognition.removeAllListeners();
+
           await SpeechRecognition.start({
-            language: 'hi-IN',
+            language: "hi-IN",
             maxResults: 1,
             popup: false,
-            partialResults: false, // Changed to false to avoid duplicates
+            partialResults: true,
           });
 
           setListening(true);
 
-          // Only listen for final results
-          SpeechRecognition.addListener('partialResults', (data: any) => {
+          //  One combined result handler
+          const handleResult = (data: any) => {
             if (data.matches && data.matches.length > 0) {
               const transcript = data.matches[0].trim();
-              
-              // Only process if it's different from last transcript
               if (transcript && transcript !== lastTranscriptRef.current) {
                 lastTranscriptRef.current = transcript;
+                console.log("Recognized:", transcript);
                 onResult(transcript, currentModeRef.current);
               }
             }
-          });
+          };
+
+          // Attach both possible native event names
+          SpeechRecognition.addListener("partialResults", handleResult);
+          (SpeechRecognition as any).addListener("result", handleResult);
         } else {
-          // Web fallback - FIXED
+          // Web fallback
           const SpeechRecognitionAPI =
             (window as any).SpeechRecognition ||
             (window as any).webkitSpeechRecognition;
+
           const recognition = new SpeechRecognitionAPI();
-          recognition.lang = 'hi-IN';
+          recognition.lang = "hi-IN";
           recognition.continuous = true;
-          recognition.interimResults = false; // Changed to false to get only final results
+          recognition.interimResults = false;
 
           recognition.onresult = (event: any) => {
-            // Only process the latest final result
             const lastResultIndex = event.results.length - 1;
             const result = event.results[lastResultIndex];
-            
+
             if (result.isFinal) {
               const transcript = result[0].transcript.trim();
-              
-              // Avoid duplicate processing
               if (transcript && transcript !== lastTranscriptRef.current) {
                 lastTranscriptRef.current = transcript;
                 onResult(transcript, currentModeRef.current);
@@ -106,28 +123,25 @@ export function useSpeechRecognition({
           };
 
           recognition.onerror = (e: any) => {
-            console.error('Speech error:', e);
-            if (e.error === 'no-speech') {
-              // Don't treat no-speech as error, just restart
-              console.log('No speech detected, continuing...');
+            console.error("Speech error:", e);
+            if (e.error === "no-speech") {
+              console.log("No speech detected, continuing...");
             } else if (onError) {
               onError(e);
             }
           };
 
           recognition.onend = () => {
-            console.log('Recognition ended, auto-restarting...');
-            // Auto-restart if still supposed to be listening
-            if (listening) {
-              setTimeout(() => {
-                try {
-                  recognition.start();
-                } catch (err) {
-                  console.error('Failed to restart:', err);
-                  setListening(false);
-                  if (onEnd) onEnd();
-                }
-              }, 100);
+            console.log("Recognition ended");
+            if (shouldRestartRef.current) {
+              try {
+                recognition.start();
+              } catch (err) {
+                console.error("Restart failed:", err);
+                shouldRestartRef.current = false;
+                setListening(false);
+                if (onEnd) onEnd();
+              }
             } else {
               setListening(false);
               if (onEnd) onEnd();
@@ -139,7 +153,7 @@ export function useSpeechRecognition({
           setListening(true);
         }
       } catch (error) {
-        console.error('Failed to start recognition:', error);
+        console.error("Failed to start recognition:", error);
         if (onError) onError(error);
       }
     },
@@ -148,21 +162,45 @@ export function useSpeechRecognition({
 
   const stopListening = useCallback(async () => {
     try {
-      lastTranscriptRef.current = ''; // Reset on stop
-      
+      // Reset last transcript to avoid stale duplicates
+      lastTranscriptRef.current = "";
+
       if (Capacitor.isNativePlatform()) {
-        await SpeechRecognition.stop();
-        SpeechRecognition.removeAllListeners();
+        try {
+          // Stop the native recognition (may throw if not started)
+          await SpeechRecognition.stop();
+        } catch (err) {
+          // not fatal — log it and continue to cleanup
+          console.warn("SpeechRecognition.stop() threw:", err);
+        }
+
+        try {
+          // Remove any native listeners attached by the plugin
+          // Some plugin versions return a promise for this
+          await SpeechRecognition.removeAllListeners();
+        } catch (err) {
+          console.warn("removeAllListeners() threw:", err);
+        }
       } else {
+        // Web fallback: stop and detach recognition
         if (recognitionRef.current) {
-          recognitionRef.current.stop();
-          recognitionRef.current = null;
+          try {
+            recognitionRef.current.onresult = null;
+            recognitionRef.current.onend = null;
+            recognitionRef.current.onerror = null;
+            recognitionRef.current.stop();
+          } catch (err) {
+            console.warn("web recognition stop threw:", err);
+          } finally {
+            recognitionRef.current = null;
+          }
         }
       }
+
       setListening(false);
       if (onEnd) onEnd();
     } catch (error) {
-      console.error('Failed to stop recognition:', error);
+      console.error("Failed to stop recognition:", error);
     }
   }, [onEnd]);
 
@@ -174,4 +212,3 @@ export function useSpeechRecognition({
     currentModeRef,
   };
 }
-
