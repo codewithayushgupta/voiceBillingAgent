@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   IonContent,
   IonHeader,
@@ -11,7 +11,7 @@ import {
   IonFooter,
   IonCard,
   IonCardContent,
-  IonProgressBar, // <-- Added
+  IonProgressBar,
 } from "@ionic/react";
 import { mic, documentText, stopCircle, refresh } from "ionicons/icons";
 import ItemsTable from "../components/ItemsTable";
@@ -26,8 +26,8 @@ import "./Home.css";
 
 const Home: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("Idle");
-  const { speak } = useSpeechSynthesis();
+  const [statusMessage, setStatusMessage] = useState("Initializing...");
+  const { speak, isReady: ttsReady } = useSpeechSynthesis();
   const startTimeRef = useRef<number | null>(null);
 
   const {
@@ -67,19 +67,24 @@ const Home: React.FC = () => {
       },
     });
 
+  // Update status when TTS is ready
+  useEffect(() => {
+    if (ttsReady) {
+      setStatusMessage("Ready");
+      console.log("TTS is ready!");
+    }
+  }, [ttsReady]);
+
   async function handleSpeechResult(transcript: string) {
     if (!startTimeRef.current) startTimeRef.current = performance.now();
 
     appendToRecognizedText(transcript);
     setStatusMessage("Processing speech…");
 
-    // 👇 Instant voice feedback
-    console.log("Processing...");
+    console.log("Received transcript:", transcript);
 
-    // Don't block UI — run heavy tasks in background
     setIsProcessing(true);
 
-    // Run background process async
     setTimeout(() => {
       updateSpeechBuffer(transcript, async (buffer) => {
         const t0 = performance.now();
@@ -99,11 +104,11 @@ const Home: React.FC = () => {
         const t1 = performance.now();
         console.log(`Item processed in ${(t1 - t0).toFixed(2)} ms`);
 
-        setIsProcessing(false)
-        startTimeRef.current = null
-        setStatusMessage("Ready")
-      })
-    }, 10); // run async without blocking UI
+        setIsProcessing(false);
+        startTimeRef.current = null;
+        setStatusMessage("Ready");
+      });
+    }, 10);
   }
 
   const handleGeneratePDFWrapper = async () => {
@@ -121,14 +126,19 @@ const Home: React.FC = () => {
   };
 
   const handleStartBilling = () => {
-    speak("कृपया अपने आइटम बोलिए।")
-    setStatusMessage("Listening…")
-    startListening("items")
+    if (!ttsReady) {
+      console.warn("TTS not ready yet");
+      alert("Speech system is still loading. Please wait a moment.");
+      return;
+    }
+
+    speak("कृपया अपने आइटम बोलिए।");
+    setStatusMessage("Listening…");
+    startListening("items");
   };
 
   const handleStopListening = async () => {
     try {
-      // await actual stop so engine and listeners are cleaned before UI updates
       await stopListening();
     } catch (err) {
       console.error("Error while stopping recognition:", err);
@@ -136,7 +146,7 @@ const Home: React.FC = () => {
       clearBuffer();
       setStatusMessage("Stopped listening");
     }
-  }
+  };
 
   const handleClear = () => {
     clearItems();
@@ -145,6 +155,12 @@ const Home: React.FC = () => {
     setIsProcessing(false);
     setStatusMessage("Cleared all items");
     speak("क्लियर कर दिया।");
+  };
+
+  // Test button for debugging
+  const handleTestSpeech = () => {
+    console.log("Testing speech...", { ttsReady });
+    speak("Testing speech synthesis in Hindi. यह एक टेस्ट है।");
   };
 
   return (
@@ -158,6 +174,25 @@ const Home: React.FC = () => {
       </IonHeader>
 
       <IonContent fullscreen className="ion-padding home-content">
+        {/* Debug Info */}
+        {!ttsReady && (
+          <IonCard color="warning">
+            <IonCardContent>
+              <IonText>⚠️ Speech system loading... Please wait.</IonText>
+            </IonCardContent>
+          </IonCard>
+        )}
+
+        {/* Test Button (remove in production) */}
+        <IonButton 
+          expand="block" 
+          color="secondary" 
+          onClick={handleTestSpeech}
+          disabled={!ttsReady}
+        >
+          🔊 Test Speech
+        </IonButton>
+
         {/* Items Section */}
         <div className="items-section">
           {items.length === 0 ? (
@@ -195,7 +230,9 @@ const Home: React.FC = () => {
                 {speechBuffer ||
                   (listening
                     ? "Listening..."
-                    : "Press the mic to start billing...")}
+                    : ttsReady 
+                    ? "Press the mic to start billing..."
+                    : "Loading speech system...")}
               </IonText>
             </IonCardContent>
           </IonCard>
@@ -230,6 +267,7 @@ const Home: React.FC = () => {
             color="medium"
             onClick={handleClear}
             className="footer-action-btn"
+            disabled={!ttsReady}
           >
             <IonIcon icon={refresh} slot="start" />
             Clear
@@ -241,6 +279,7 @@ const Home: React.FC = () => {
             size="large"
             className={`mic-btn ${listening ? "active" : ""}`}
             onClick={listening ? handleStopListening : handleStartBilling}
+            disabled={!ttsReady}
           >
             <IonIcon icon={listening ? stopCircle : mic} slot="icon-only" />
           </IonButton>
@@ -250,6 +289,7 @@ const Home: React.FC = () => {
             color="light"
             onClick={handleGeneratePDFWrapper}
             className="footer-action-btn"
+            disabled={!ttsReady}
           >
             <IonIcon icon={documentText} slot="start" />
             Bill
