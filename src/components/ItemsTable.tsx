@@ -37,7 +37,10 @@ const ItemsTable: React.FC<ItemsTableProps> = ({
       <IonCardHeader>
         <IonCardTitle>🧾 Detected Items</IonCardTitle>
       </IonCardHeader>
-      <IonCardContent>
+      <IonCardContent style={{
+        height: "232px"
+      }}
+      >
         {items.length === 0 ? (
           <p style={{ textAlign: 'center', color: 'var(--ion-color-medium)' }}>
             No items yet. Speak your bill details.

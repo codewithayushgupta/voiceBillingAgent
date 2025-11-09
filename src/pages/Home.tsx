@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   IonContent,
   IonHeader,
@@ -26,8 +26,8 @@ import "./Home.css";
 
 const Home: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("Initializing...");
-  const { speak, isReady: ttsReady } = useSpeechSynthesis();
+  const [statusMessage, setStatusMessage] = useState("Idle");
+  const { speak, stop: stopSpeech, isSpeakingRef } = useSpeechSynthesis();
   const startTimeRef = useRef<number | null>(null);
 
   const {
@@ -65,26 +65,31 @@ const Home: React.FC = () => {
         console.log("Speech recognition ended");
         setStatusMessage("Stopped listening");
       },
+      onStart: () => {
+        // User started speaking - interrupt any ongoing TTS immediately
+        if (isSpeakingRef.current) {
+          console.log("User started speaking - interrupting TTS");
+          stopSpeech();
+        }
+      },
     });
 
-  // Update status when TTS is ready
-  useEffect(() => {
-    if (ttsReady) {
-      setStatusMessage("Ready");
-      console.log("TTS is ready!");
-    }
-  }, [ttsReady]);
-
   async function handleSpeechResult(transcript: string) {
+    // Priority: Stop TTS immediately when user speaks
+    if (isSpeakingRef.current) {
+      await stopSpeech();
+    }
+
     if (!startTimeRef.current) startTimeRef.current = performance.now();
 
     appendToRecognizedText(transcript);
     setStatusMessage("Processing speech…");
 
-    console.log("Received transcript:", transcript);
+    console.log("Processing...");
 
     setIsProcessing(true);
 
+    // Run background process async
     setTimeout(() => {
       updateSpeechBuffer(transcript, async (buffer) => {
         const t0 = performance.now();
@@ -125,16 +130,19 @@ const Home: React.FC = () => {
     setStatusMessage("Bill generated");
   };
 
-  const handleStartBilling = () => {
-    if (!ttsReady) {
-      console.warn("TTS not ready yet");
-      alert("Speech system is still loading. Please wait a moment.");
-      return;
+  const handleStartBilling = async () => {
+    // Stop any ongoing speech before starting to listen
+    if (isSpeakingRef.current) {
+      await stopSpeech();
     }
 
     speak("कृपया अपने आइटम बोलिए।");
     setStatusMessage("Listening…");
-    startListening("items");
+
+    // Wait for speech to complete before starting recognition
+    setTimeout(() => {
+      startListening("items");
+    }, 2000); // Adjust based on typical speech duration
   };
 
   const handleStopListening = async () => {
@@ -148,19 +156,21 @@ const Home: React.FC = () => {
     }
   };
 
-  const handleClear = () => {
+  const handleClear = async () => {
+    // Stop speech and recognition before clearing
+    if (isSpeakingRef.current) {
+      await stopSpeech();
+    }
+    if (listening) {
+      await stopListening();
+    }
+
     clearItems();
     resetFlow();
     currentModeRef.current = "items";
     setIsProcessing(false);
     setStatusMessage("Cleared all items");
     speak("क्लियर कर दिया।");
-  };
-
-  // Test button for debugging
-  const handleTestSpeech = () => {
-    console.log("Testing speech...", { ttsReady });
-    speak("Testing speech synthesis in Hindi. यह एक टेस्ट है।");
   };
 
   return (
@@ -174,26 +184,6 @@ const Home: React.FC = () => {
       </IonHeader>
 
       <IonContent fullscreen className="ion-padding home-content">
-        {/* Debug Info */}
-        {!ttsReady && (
-          <IonCard color="warning">
-            <IonCardContent>
-              <IonText>⚠️ Speech system loading... Please wait.</IonText>
-            </IonCardContent>
-          </IonCard>
-        )}
-
-        {/* Test Button (remove in production) */}
-        <IonButton 
-          expand="block" 
-          color="secondary" 
-          onClick={handleTestSpeech}
-          disabled={!ttsReady}
-        >
-          🔊 Test Speech
-        </IonButton>
-
-        {/* Items Section */}
         <div className="items-section">
           {items.length === 0 ? (
             <div className="empty-state">
@@ -202,25 +192,25 @@ const Home: React.FC = () => {
               </IonText>
             </div>
           ) : (
-            <ItemsTable
-              items={items}
-              editingIndex={editingIndex}
-              editFormData={editFormData}
-              onStartEdit={handleStartEdit}
-              onCancelEdit={handleCancelEdit}
-              onEditChange={handleEditChange}
-              onSaveEdit={handleSaveEdit}
-              onDeleteItem={handleDeleteItem}
-            />
+            <div className="scrollable-items">
+              <ItemsTable
+                items={items}
+                editingIndex={editingIndex}
+                editFormData={editFormData}
+                onStartEdit={handleStartEdit}
+                onCancelEdit={handleCancelEdit}
+                onEditChange={handleEditChange}
+                onSaveEdit={handleSaveEdit}
+                onDeleteItem={handleDeleteItem}
+              />
+            </div>
           )}
         </div>
+
       </IonContent>
 
-      {/* Professional Footer Area */}
       <IonFooter className="home-footer">
-        {/* 1. Transcript and Status Area */}
         <div className="transcript-area">
-          {/* Transcript Box */}
           <IonCard className="transcript-card">
             <IonCardContent className="transcript-box-content">
               <IonText
@@ -230,14 +220,11 @@ const Home: React.FC = () => {
                 {speechBuffer ||
                   (listening
                     ? "Listening..."
-                    : ttsReady 
-                    ? "Press the mic to start billing..."
-                    : "Loading speech system...")}
+                    : "Press the mic to start billing...")}
               </IonText>
             </IonCardContent>
           </IonCard>
 
-          {/* Processing/Listening Indicator */}
           <div className="status-indicator">
             {isProcessing ? (
               <div className="processing-indicator">
@@ -260,14 +247,12 @@ const Home: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. Bottom Action Bar */}
         <div className="bottom-action-bar">
           <IonButton
             fill="outline"
             color="medium"
             onClick={handleClear}
             className="footer-action-btn"
-            disabled={!ttsReady}
           >
             <IonIcon icon={refresh} slot="start" />
             Clear
@@ -279,7 +264,6 @@ const Home: React.FC = () => {
             size="large"
             className={`mic-btn ${listening ? "active" : ""}`}
             onClick={listening ? handleStopListening : handleStartBilling}
-            disabled={!ttsReady}
           >
             <IonIcon icon={listening ? stopCircle : mic} slot="icon-only" />
           </IonButton>
@@ -289,7 +273,6 @@ const Home: React.FC = () => {
             color="light"
             onClick={handleGeneratePDFWrapper}
             className="footer-action-btn"
-            disabled={!ttsReady}
           >
             <IonIcon icon={documentText} slot="start" />
             Bill

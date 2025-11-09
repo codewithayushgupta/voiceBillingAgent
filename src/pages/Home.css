@@ -160,3 +160,24 @@
   color: var(--ion-color-medium);
 }
 
+
+/* Scrollable section for detected items */
+.scrollable-items {
+  max-height: 60vh; /* adjust based on design */
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* Optional: smooth scrollbar styling for web */
+.scrollable-items::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollable-items::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 100, 100, 0.3);
+  border-radius: 4px;
+}
+
+.scrollable-items::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 100, 100, 0.5);
+}
