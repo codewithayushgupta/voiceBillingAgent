@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   IonContent,
   IonHeader,
@@ -27,8 +27,10 @@ import "./Home.css";
 const Home: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Idle");
-  const { speak, stop: stopSpeech, isSpeakingRef } = useSpeechSynthesis();
+  const [isPressing, setIsPressing] = useState(false);
+  const { speak } = useSpeechSynthesis();
   const startTimeRef = useRef<number | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     speechBuffer,
@@ -36,6 +38,7 @@ const Home: React.FC = () => {
     updateSpeechBuffer,
     clearBuffer,
     resetFlow,
+    forceProcessBuffer,
   } = useBillFlow();
 
   const {
@@ -62,58 +65,49 @@ const Home: React.FC = () => {
     useSpeechRecognition({
       onResult: handleSpeechResult,
       onEnd: () => {
-        console.log("Speech recognition ended");
-        setStatusMessage("Stopped listening");
-      },
-      onStart: () => {
-        // User started speaking - interrupt any ongoing TTS immediately
-        if (isSpeakingRef.current) {
-          console.log("User started speaking - interrupting TTS");
-          stopSpeech();
+        console.log("🎤 Speech recognition ended");
+        // Don't update status here if processing
+        if (!isProcessing) {
+          setStatusMessage("Ready");
         }
+        setIsPressing(false);
       },
     });
 
   async function handleSpeechResult(transcript: string) {
-    // Priority: Stop TTS immediately when user speaks
-    if (isSpeakingRef.current) {
-      await stopSpeech();
-    }
-
     if (!startTimeRef.current) startTimeRef.current = performance.now();
 
     appendToRecognizedText(transcript);
-    setStatusMessage("Processing speech…");
+    
+    // Continue processing even if button is released
+    console.log("📝 Received transcript:", transcript);
 
-    console.log("Processing...");
+    // Process immediately in background without blocking
+    updateSpeechBuffer(transcript, async (buffer) => {
+      setIsProcessing(true);
+      setStatusMessage("Processing speech…");
+      
+      const t0 = performance.now();
 
-    setIsProcessing(true);
-
-    // Run background process async
-    setTimeout(() => {
-      updateSpeechBuffer(transcript, async (buffer) => {
-        const t0 = performance.now();
-
-        await handleItemSpeech(buffer, itemsRef.current, {
-          speak,
-          setIsProcessing,
-          setStatusMessage,
-          handleGeneratePDF: handleGeneratePDFWrapper,
-          itemHandlers: {
-            handleAddItems,
-            handleDeleteItems,
-            handleUpdateItems,
-          },
-        });
-
-        const t1 = performance.now();
-        console.log(`Item processed in ${(t1 - t0).toFixed(2)} ms`);
-
-        setIsProcessing(false);
-        startTimeRef.current = null;
-        setStatusMessage("Ready");
+      await handleItemSpeech(buffer, itemsRef.current, {
+        speak,
+        setIsProcessing,
+        setStatusMessage,
+        handleGeneratePDF: handleGeneratePDFWrapper,
+        itemHandlers: {
+          handleAddItems,
+          handleDeleteItems,
+          handleUpdateItems,
+        },
       });
-    }, 10);
+
+      const t1 = performance.now();
+      console.log(`✅ Item processed in ${(t1 - t0).toFixed(2)} ms`);
+
+      setIsProcessing(false);
+      startTimeRef.current = null;
+      setStatusMessage("Ready");
+    }, 800); // Reduced to 800ms for faster response after speech ends
   }
 
   const handleGeneratePDFWrapper = async () => {
@@ -130,41 +124,58 @@ const Home: React.FC = () => {
     setStatusMessage("Bill generated");
   };
 
-  const handleStartBilling = async () => {
-    // Stop any ongoing speech before starting to listen
-    if (isSpeakingRef.current) {
-      await stopSpeech();
-    }
-
-    speak("कृपया अपने आइटम बोलिए।");
+  // Push-to-talk handlers
+  const handleMicPress = () => {
+    setIsPressing(true);
+    
+    // Start listening immediately without speaking
     setStatusMessage("Listening…");
-
-    // Wait for speech to complete before starting recognition
-    setTimeout(() => {
-      startListening("items");
-    }, 2000); // Adjust based on typical speech duration
+    startListening("items");
   };
 
-  const handleStopListening = async () => {
-    try {
-      await stopListening();
-    } catch (err) {
-      console.error("Error while stopping recognition:", err);
-    } finally {
-      clearBuffer();
-      setStatusMessage("Stopped listening");
+  const handleMicRelease = async () => {
+    setIsPressing(false);
+    
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
     }
-  };
 
-  const handleClear = async () => {
-    // Stop speech and recognition before clearing
-    if (isSpeakingRef.current) {
-      await stopSpeech();
-    }
+    // Wait a bit to ensure final speech is captured before stopping
     if (listening) {
-      await stopListening();
+      setStatusMessage("Finalizing...");
+      
+      // Wait 500ms to ensure speech recognition captures the final words
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      try {
+        await stopListening();
+        setStatusMessage("Processing...");
+        // Don't clear buffer here - let the speech result handler process it
+      } catch (err) {
+        console.error("Error while stopping recognition:", err);
+        setStatusMessage("Error");
+      }
     }
+  };
 
+  // Handle touch/mouse events
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    handleMicPress();
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    e.preventDefault();
+    handleMicRelease();
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent) => {
+    e.preventDefault();
+    handleMicRelease();
+  };
+
+  const handleClear = () => {
     clearItems();
     resetFlow();
     currentModeRef.current = "items";
@@ -184,33 +195,45 @@ const Home: React.FC = () => {
       </IonHeader>
 
       <IonContent fullscreen className="ion-padding home-content">
+        {/* Items Section */}
         <div className="items-section">
           {items.length === 0 ? (
             <div className="empty-state">
               <IonText color="medium">
-                🎙 Start speaking to add items to your bill.
+                🎙 Hold the mic button and speak to add items.
               </IonText>
             </div>
           ) : (
-            <div className="scrollable-items">
-              <ItemsTable
-                items={items}
-                editingIndex={editingIndex}
-                editFormData={editFormData}
-                onStartEdit={handleStartEdit}
-                onCancelEdit={handleCancelEdit}
-                onEditChange={handleEditChange}
-                onSaveEdit={handleSaveEdit}
-                onDeleteItem={handleDeleteItem}
-              />
-            </div>
+            <>
+              {/* Item Count Badge */}
+              <div className="items-count-badge">
+                📦 {items.length} {items.length === 1 ? 'Item' : 'Items'} • Total: ₹
+                {items.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
+              </div>
+              
+              {/* Scrollable Items List */}
+              <div className="items-list-container">
+                <ItemsTable
+                  items={items}
+                  editingIndex={editingIndex}
+                  editFormData={editFormData}
+                  onStartEdit={handleStartEdit}
+                  onCancelEdit={handleCancelEdit}
+                  onEditChange={handleEditChange}
+                  onSaveEdit={handleSaveEdit}
+                  onDeleteItem={handleDeleteItem}
+                />
+              </div>
+            </>
           )}
         </div>
-
       </IonContent>
 
+      {/* Professional Footer Area */}
       <IonFooter className="home-footer">
+        {/* 1. Transcript and Status Area */}
         <div className="transcript-area">
+          {/* Transcript Box */}
           <IonCard className="transcript-card">
             <IonCardContent className="transcript-box-content">
               <IonText
@@ -220,11 +243,12 @@ const Home: React.FC = () => {
                 {speechBuffer ||
                   (listening
                     ? "Listening..."
-                    : "Press the mic to start billing...")}
+                    : "Press & hold the mic to start billing...")}
               </IonText>
             </IonCardContent>
           </IonCard>
 
+          {/* Processing/Listening Indicator */}
           <div className="status-indicator">
             {isProcessing ? (
               <div className="processing-indicator">
@@ -247,6 +271,7 @@ const Home: React.FC = () => {
           </div>
         </div>
 
+        {/* 2. Bottom Action Bar */}
         <div className="bottom-action-bar">
           <IonButton
             fill="outline"
@@ -258,15 +283,35 @@ const Home: React.FC = () => {
             Clear
           </IonButton>
 
-          <IonButton
-            color={listening ? "danger" : "success"}
-            shape="round"
-            size="large"
-            className={`mic-btn ${listening ? "active" : ""}`}
-            onClick={listening ? handleStopListening : handleStartBilling}
+          {/* Push-to-Talk Mic Button */}
+          <button
+            className={`mic-button ${isPressing || listening ? "active" : ""}`}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onPointerLeave={handlePointerUp}
+            style={{
+              background: isPressing || listening 
+                ? "var(--ion-color-danger)" 
+                : "var(--ion-color-success)",
+              border: "none",
+              borderRadius: "50%",
+              width: "64px",
+              height: "64px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
+              transition: "all 0.2s ease",
+              touchAction: "none",
+            }}
           >
-            <IonIcon icon={listening ? stopCircle : mic} slot="icon-only" />
-          </IonButton>
+            <IonIcon
+              icon={isPressing || listening ? stopCircle : mic}
+              style={{ fontSize: "32px", color: "white" }}
+            />
+          </button>
 
           <IonButton
             fill="outline"

@@ -2,10 +2,17 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.voicebilling.app',
-  appName: 'Voice Billing',
+  appName: 'Vaani',
   webDir: 'dist',
   server: {
     androidScheme: 'https',
+    cleartext: true, // Allow HTTP for development/API calls
+    allowNavigation: ['*'], // Allow external API calls
+  },
+  android: {
+    allowMixedContent: true, // Allow mixed HTTP/HTTPS content
+    captureInput: true, // Better keyboard handling
+    webContentsDebuggingEnabled: true, // Enable Chrome DevTools debugging
   },
   plugins: {
     SplashScreen: {
@@ -15,6 +22,16 @@ const config: CapacitorConfig = {
       androidSpinnerStyle: 'large',
       iosSpinnerStyle: 'small',
       spinnerColor: '#ffffff',
+      androidScaleType: 'CENTER_CROP',
+      splashFullScreen: true,
+      splashImmersive: true,
+    },
+    SpeechRecognition: {
+      language: 'hi-IN',
+      matches: 5,
+      prompt: '', // No popup
+      showPopup: false,
+      showPartialResults: true,
     },
   },
 };

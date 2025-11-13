@@ -1,5 +1,5 @@
 {
-  "name": "MyIonicApp",
+  "name": "vaani",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "test.e2e": "cypress run",
     "test.unit": "vitest",
-    "lint": "eslint"
+    "lint": "eslint",
+    "android:dev": "npm run build && npx cap sync android && npx cap open android",
+    "android:run": "npm run build && npx cap sync android && npx cap run android"
   },
   "dependencies": {
     "@capacitor-community/speech-recognition": "^7.0.1",
@@ -26,7 +28,6 @@
     "@ionic/react-router": "^8.5.0",
     "@types/react-router": "^5.1.20",
     "@types/react-router-dom": "^5.3.3",
-    "cordova-plugin-tts": "^0.2.3",
     "ionicons": "^7.4.0",
     "jspdf": "^3.0.3",
     "react": "19.0.0",
@@ -59,6 +60,5 @@
   },
   "overrides": {
     "rollup": "4.44.0"
-  },
-  "description": "An Ionic project"
+  }
 }

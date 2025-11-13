@@ -20,20 +20,28 @@ export function useSpeechRecognition({
   const lastTranscriptRef = useRef("");
   const shouldRestartRef = useRef(false);
 
+  // In checkAvailability function
   const checkAvailability = useCallback(async () => {
     try {
       if (Capacitor.isNativePlatform()) {
+        // Check if speech recognition is available
         const { available } = await SpeechRecognition.available();
-        setAvailable(available);
 
         if (!available) {
-          console.warn("Speech recognition not available on this device");
+          console.warn("Speech recognition not available");
+
+          // Show user-friendly message
+          alert(
+            "Speech recognition is not available on this device. " +
+              "Please ensure Google app is installed and updated."
+          );
           return false;
         }
 
-        const permissionResult: any =
-          await SpeechRecognition.requestPermissions();
-        console.log("Speech permission result:", permissionResult);
+        setAvailable(available);
+
+        // Request permissions
+        const permissionResult = await SpeechRecognition.requestPermissions();
 
         const granted =
           permissionResult?.speechRecognition === "granted" ||
@@ -42,19 +50,24 @@ export function useSpeechRecognition({
 
         if (!granted) {
           alert(
-            "Microphone permission denied. Please enable it manually from Settings → App Permissions."
+            "Microphone permission is required for voice billing. " +
+              "Please enable it in:\n" +
+              "Settings → Apps → Vaani → Permissions → Microphone"
           );
+          return false;
         }
 
-        return granted;
+        console.log("✅ Speech recognition ready on Android");
+        return true;
       } else {
+        // Web fallback
         const isAvailable =
           "webkitSpeechRecognition" in window || "SpeechRecognition" in window;
         setAvailable(isAvailable);
         return isAvailable;
       }
     } catch (error) {
-      console.error("Speech recognition permission check failed:", error);
+      console.error("Permission check failed:", error);
       return false;
     }
   }, []);

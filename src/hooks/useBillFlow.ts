@@ -13,18 +13,22 @@ export function useBillFlow() {
   }, []);
 
   const updateSpeechBuffer = useCallback(
-    (text: string, callback: (buffer: string) => void, delay = 1000) => {
+    (text: string, callback: (buffer: string) => void, delay = 800) => {
       setSpeechBuffer((prevBuffer) => {
         const newBuffer = prevBuffer ? `${prevBuffer} ${text}` : text;
 
+        // Clear any existing timer
         if (parseTimerRef.current) {
           clearTimeout(parseTimerRef.current);
         }
 
+        // Set new timer to process buffer
         parseTimerRef.current = setTimeout(() => {
-          if (newBuffer.trim().length > 0) {
-            callback(newBuffer.trim());
-            setSpeechBuffer('');
+          const trimmedBuffer = newBuffer.trim();
+          if (trimmedBuffer.length > 0) {
+            console.log('🔄 Processing buffer:', trimmedBuffer);
+            callback(trimmedBuffer);
+            setSpeechBuffer(''); // Clear buffer after processing
           }
         }, delay);
 
@@ -37,6 +41,7 @@ export function useBillFlow() {
   const clearBuffer = useCallback(() => {
     if (parseTimerRef.current) {
       clearTimeout(parseTimerRef.current);
+      parseTimerRef.current = null;
     }
     setSpeechBuffer('');
   }, []);
@@ -46,6 +51,24 @@ export function useBillFlow() {
     clearBuffer();
   }, [clearBuffer]);
 
+  // Force process buffer immediately
+  const forceProcessBuffer = useCallback((callback: (buffer: string) => void) => {
+    setSpeechBuffer((currentBuffer) => {
+      if (parseTimerRef.current) {
+        clearTimeout(parseTimerRef.current);
+        parseTimerRef.current = null;
+      }
+      
+      const trimmedBuffer = currentBuffer.trim();
+      if (trimmedBuffer.length > 0) {
+        console.log('⚡ Force processing buffer:', trimmedBuffer);
+        callback(trimmedBuffer);
+      }
+      
+      return ''; // Clear buffer
+    });
+  }, []);
+
   return {
     speechBuffer,
     setSpeechBuffer,
@@ -54,6 +77,7 @@ export function useBillFlow() {
     updateSpeechBuffer,
     clearBuffer,
     resetFlow,
+    forceProcessBuffer,
     parseTimerRef,
   };
 }
