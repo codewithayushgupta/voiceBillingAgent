@@ -20,7 +20,7 @@ export function useSpeechRecognition({
   const lastTranscriptRef = useRef("");
   const shouldRestartRef = useRef(false);
 
-  // In checkAvailability function
+  // Check availability & request permissions
   const checkAvailability = useCallback(async () => {
     try {
       if (Capacitor.isNativePlatform()) {
@@ -43,10 +43,15 @@ export function useSpeechRecognition({
         // Request permissions
         const permissionResult = await SpeechRecognition.requestPermissions();
 
+        // ===== TypeScript-safe runtime checks: cast to `any` =====
+        // The plugin can return different shapes depending on version/platform.
+        // Casting to `any` avoids TS errors while still checking known fields at runtime.
+        const pr: any = permissionResult;
+
         const granted =
-          permissionResult?.speechRecognition === "granted" ||
-          permissionResult?.permission === "granted" ||
-          permissionResult?.granted === true;
+          pr?.speechRecognition === "granted" ||
+          pr?.permission === "granted" ||
+          pr?.granted === true;
 
         if (!granted) {
           alert(
@@ -96,7 +101,7 @@ export function useSpeechRecognition({
 
           setListening(true);
 
-          //  One combined result handler
+          // One combined result handler
           const handleResult = (data: any) => {
             if (data.matches && data.matches.length > 0) {
               const transcript = data.matches[0].trim();
@@ -170,7 +175,7 @@ export function useSpeechRecognition({
         if (onError) onError(error);
       }
     },
-    [checkAvailability, onResult, onError, onEnd, listening]
+    [checkAvailability, onResult, onError, onEnd]
   );
 
   const stopListening = useCallback(async () => {
