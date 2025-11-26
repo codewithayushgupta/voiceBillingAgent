@@ -1,103 +1,117 @@
-/* Make sure IonContent respects the footer */
+/* src/pages/Home.css
+   Optimized, theme-aware styles for Home page.
+   Uses Ionic CSS variables so light/dark modes work automatically.
+   - Removes duplicated rules
+   - Keeps polished footer, transcript, mic button, scrollbars, responsiveness
+*/
+
+/* ---------- Layout / spacing ---------- */
 .home-content {
-  --padding-bottom: 220px; 
+  --padding-bottom: 220px; /* ensure space above footer on small screens */
+  background: var(--ion-background-color);
+  color: var(--ion-text-color);
+  transition: background 200ms ease, color 200ms ease;
 }
 
-/* --- Items List Container with Scrollbar --- */
+/* Ensure IonContent respects footer safe area */
+.home-content {
+  padding-bottom: env(safe-area-inset-bottom, 220px);
+}
+
+/* Items list container (scrollable) */
 .items-list-container {
-  max-height: calc(100vh - 300px); /* Adjust based on header + footer */
+  max-height: calc(100vh - 280px); /* header + footer area */
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 8px;
-  margin-bottom: 16px;
+  padding-bottom: 6px;
+  scroll-behavior: smooth;
 }
 
-/* Custom Scrollbar Styling */
+/* ---------- Scrollbar (webkit + firefox) ---------- */
 .items-list-container::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
-
 .items-list-container::-webkit-scrollbar-track {
-  background: var(--ion-color-light);
+  background: var(--ion-color-step-150);
   border-radius: 10px;
-  margin: 4px 0;
 }
-
 .items-list-container::-webkit-scrollbar-thumb {
   background: var(--ion-color-primary);
   border-radius: 10px;
-  transition: background 0.3s ease;
+  transition: background 0.25s ease;
 }
-
 .items-list-container::-webkit-scrollbar-thumb:hover {
   background: var(--ion-color-primary-shade);
 }
 
-/* Firefox Scrollbar */
+/* Firefox */
 .items-list-container {
   scrollbar-width: thin;
-  scrollbar-color: var(--ion-color-primary) var(--ion-color-light);
+  scrollbar-color: var(--ion-color-primary) var(--ion-color-step-150);
 }
 
-/* Smooth scroll behavior */
-.items-list-container {
-  scroll-behavior: smooth;
-}
-
-/* --- Professional Footer --- */
+/* ---------- Footer / Transcript area ---------- */
 .home-footer {
-  background-color: var(--ion-color-dark);
-  padding: 8px 16px;
-  padding-bottom: var(--ion-safe-area-bottom, 16px);
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
   position: fixed;
   bottom: 0;
-  width: 100%;
+  left: 0;
+  right: 0;
   z-index: 1000;
+  padding: 8px 12px;
+  padding-bottom: env(safe-area-inset-bottom, 12px);
+  background: var(--ion-background-color);
+  color: var(--ion-text-color);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  border-top: 1px solid var(--ion-color-step-150);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.06);
+  transition: background 200ms ease, color 200ms ease, box-shadow 200ms ease;
+  backface-visibility: hidden;
 }
 
-/* 1. Transcript Area (Box + Status) */
+/* Transcript box & card */
 .transcript-area {
   width: 100%;
   margin-bottom: 8px;
 }
 
 .transcript-card {
-  --background: #f4f5f8;
+  --background: var(--ion-color-step-50);
   margin: 0;
   border-radius: 12px;
   box-shadow: none;
+  overflow: hidden;
 }
 
 .transcript-box-content {
-  padding: 12px !important;
+  padding: 10px 12px !important;
   min-height: 48px;
   display: flex;
   align-items: center;
   overflow-y: auto;
-  max-height: 80px;
+  max-height: 120px;
 }
 
+/* Transcript text uses system text color for readability */
 .transcript-text {
   font-style: italic;
   width: 100%;
-  color: var(--ion-color-medium);
+  color: var(--ion-text-color);
+  font-size: 14px;
+  line-height: 1.3;
+  word-break: break-word;
 }
 
-.transcript-text[color="dark"] {
-  color: var(--ion-color-dark) !important;
-}
-
-/* 2. Status Indicator (Processing/Listening) */
+/* Status indicator area */
 .status-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 30px;
+  height: 36px;
   margin-top: 8px;
-  font-size: 0.9em;
+  font-size: 0.93em;
 }
 
 .listening-indicator {
@@ -106,200 +120,316 @@
   gap: 8px;
 }
 
-.status-indicator .pulse-icon {
-  animation: pulse 1.5s infinite ease-in-out;
-}
-
 .processing-indicator {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-
 .processing-text {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   font-size: 0.9em;
   color: var(--ion-color-medium);
 }
-
 .processing-indicator ion-progress-bar {
-  width: 90%;
+  width: 92%;
   height: 6px;
-  border-radius: 3px;
-  --background: var(--ion-color-step-200, #ebebeb);
+  border-radius: 6px;
+  --background: var(--ion-color-step-200);
 }
 
-.status-placeholder {
-  height: 30px;
-}
-
-/* 3. Bottom Action Bar */
+/* ---------- Bottom action bar ---------- */
 .bottom-action-bar {
   display: flex;
-  justify-content: space-around;
+  gap: 12px;
   align-items: center;
+  justify-content: space-between;
   width: 100%;
 }
 
+/* Ionic button tweak */
 .footer-action-btn {
   --border-radius: 20px;
   font-weight: 600;
+  min-width: 84px;
+  --padding-start: 12px;
+  --padding-end: 12px;
 }
 
-/* Push-to-Talk Mic Button */
+/* ---------- Mic button (big round push-to-talk) ---------- */
 .mic-button {
   position: relative;
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
   outline: none;
-}
-
-.mic-button:active {
-  transform: scale(0.95);
-}
-
-.mic-button.active {
-  animation: pulse 1.5s infinite;
-}
-
-.mic-button:focus {
-  outline: none;
-}
-
-/* Visual feedback for holding */
-.mic-button.active::after {
-  content: '';
-  position: absolute;
-  top: -4px;
-  left: -4px;
-  right: -4px;
-  bottom: -4px;
-  border: 2px solid var(--ion-color-danger);
+  border: none;
   border-radius: 50%;
-  animation: ripple 1.5s infinite;
+  width: 72px;
+  height: 72px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  touch-action: manipulation;
+  font-size: 36px;
+  color: #fff;
+  background: var(--ion-color-success);
+  box-shadow: 0 8px 20px rgba(2,6,23,0.08);
 }
 
-/* --- Utility Animations --- */
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 0.7;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+/* Active / listening state */
+.mic-button.active {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 14px 36px rgba(2,6,23,0.14);
+  background: var(--ion-color-danger);
 }
 
+/* ripple & pulse visuals */
+.mic-button.active::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid var(--ion-color-danger);
+  animation: ripple 1.6s infinite ease-in-out;
+}
+
+/* hover / focus */
+.mic-button:hover:not(.active) {
+  filter: brightness(0.98);
+}
+.mic-button:active { transform: scale(0.96); }
+.mic-button:focus { outline: none; box-shadow: 0 0 0 4px rgba(0,0,0,0.06); }
+
+/* ---------- Animations ---------- */
 @keyframes ripple {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1.3);
-    opacity: 0;
-  }
+  0% { transform: scale(1); opacity: 0.9; }
+  70% { transform: scale(1.24); opacity: 0; }
+  100% { transform: scale(1.24); opacity: 0; }
 }
 
-/* --- Other App Styles --- */
-.app-header {
-  /* Add any header styles if needed */
-}
+/* ---------- App / header / badges ---------- */
+.app-header { /* leave to AppHeader to style with vars */ }
+.app-title { font-weight: 600; }
 
-.app-title {
-  /* Add title styles if needed */
-}
+/* item section */
+.items-section { position: relative; padding-bottom: 6px; }
 
-.items-section {
-  position: relative;
-}
-
+/* empty state styling */
 .empty-state {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 200px;
+  height: 160px;
   color: var(--ion-color-medium);
 }
 
-/* Item count badge */
+/* items count badge */
 .items-count-badge {
   position: sticky;
-  top: 0;
-  z-index: 10;
-  background: var(--ion-color-primary);
+  top: 8px;
+  z-index: 8;
+  display: inline-block;
+  background: linear-gradient(135deg, var(--ion-color-primary), color-mix(in srgb, var(--ion-color-primary) 70%, transparent));
   color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.08);
   margin-bottom: 12px;
-  text-align: center;
+  font-size: 14px;
+}
+
+/* ---------- Table adjustments (ItemsTable uses these vars) ---------- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--ion-text-color);
+  background: transparent;
+}
+th {
+  padding: 12px;
+  text-align: left;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  background: var(--ion-color-step-150);
+  color: var(--ion-text-color);
+  border-bottom: 1px solid var(--ion-color-step-250);
+}
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ion-color-step-200);
 }
 
-/* Dark mode adjustments */
+/* alternate row shading (theme-aware) */
+tbody tr:nth-child(odd) { background: transparent; }
+tbody tr:nth-child(even) { background: var(--ion-color-step-50); }
+
+/* ---------- Table contrast fixes (dark+light safe) ---------- */
+/* Ensure cells and headers always use readable text color */
+table, th, td {
+  color: var(--ion-text-color) !important;
+}
+
+/* Make table backgrounds subtle and theme-aware.
+   Use color-mix where supported; fallback to step variables.
+*/
+tbody tr {
+  background: transparent !important;
+}
+
+/* Even-row subtle tint (works in both modes).
+   color-mix gives a tiny contrast offset from the background.
+*/
+tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--ion-background-color) 94%, var(--ion-color-step-50) 6%);
+  /* fallback for browsers not supporting color-mix */
+  background: var(--ion-color-step-50);
+}
+
+/* Slightly stronger tint for hovered row for clarity */
+tbody tr:hover {
+  background: color-mix(in srgb, var(--ion-background-color) 90%, var(--ion-color-step-150) 10%);
+  transition: background 140ms ease;
+}
+
+/* Header: make sure header has correct contrast and doesn't force hard colors */
+th {
+  background: color-mix(in srgb, var(--ion-background-color) 86%, var(--ion-color-step-150) 14%);
+  /* fallback */
+  background: var(--ion-color-step-150);
+  color: var(--ion-text-color) !important;
+}
+
+/* Table borders - keep subtle and theme-aware */
+td, th {
+  border-bottom: 1px solid color-mix(in srgb, var(--ion-background-color) 88%, var(--ion-color-step-200) 12%);
+  border-bottom: 1px solid var(--ion-color-step-200);
+}
+
+/* Inputs inside table: readable background + text */
+table input,
+.items-section input,
+.transcript-box-content input {
+  background: var(--ion-background-color) !important;
+  color: var(--ion-text-color) !important;
+  border: 1px solid var(--ion-color-step-200) !important;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+/* If any element forces white text on dark background, this normalizes it */
+table td * {
+  color: inherit !important;
+}
+
+/* Small screens: tighten padding to avoid overflow */
+@media (max-width: 420px) {
+  th, td { padding: 8px !important; }
+  .items-count-badge { font-size: 13px; }
+}
+
+
+/* action buttons default */
+button {
+  background: var(--ion-color-step-100);
+  color: var(--ion-text-color);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: background 160ms ease, transform 120ms ease;
+}
+button:hover { background: var(--ion-color-step-150); }
+
+/* icon-only buttons used in ItemsTable */
+.icon-btn {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--ion-color-primary);
+}
+.icon-btn.delete { color: var(--ion-color-danger); }
+
+/* ---------- Responsive tweaks ---------- */
+@media (max-width: 420px) {
+  .app-title { font-size: 16px; }
+  .mic-button { width: 72px; height: 72px; font-size: 34px; }
+  .transcript-box-content { padding: 10px; min-height: 48px; }
+  .items-count-badge { font-size: 13px; padding: 6px 10px; }
+}
+
+/* ---------- Accessibility & interaction ---------- */
+.mic-button,
+.footer-action-btn,
+.icon-btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* ---------- Dark-mode fine-tweaks via prefers-color-scheme ---------- */
 @media (prefers-color-scheme: dark) {
-  .items-list-container::-webkit-scrollbar-track {
-    background: var(--ion-color-step-200);
-  }
-  
-  .items-list-container::-webkit-scrollbar-thumb {
-    background: var(--ion-color-primary-tint);
-  }
-  
-  .items-list-container::-webkit-scrollbar-thumb:hover {
-    background: var(--ion-color-primary);
-  }
+  .home-footer { box-shadow: 0 -6px 20px rgba(0,0,0,0.45); }
+  .items-count-badge { box-shadow: 0 6px 22px rgba(0,0,0,0.4); }
 }
 
-/* Android-specific optimizations */
-@supports (-webkit-touch-callout: none) {
-  /* iOS specific */
-}
+/* ---------- Small fixes for Ionic menu overlay ---------- */
+ion-menu { z-index: 1200; }
+ion-menu .menu-inner { z-index: 1201; }
 
-/* Android Chrome */
-@media screen and (-webkit-min-device-pixel-ratio: 0) {
-  .items-list-container {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-  }
-  
-  .mic-button {
-    -webkit-tap-highlight-color: transparent;
-    tap-highlight-color: transparent;
-  }
-}
+/* ---------- End of Home.css ---------- */
 
-/* Prevent Android viewport zoom on input focus */
-input, textarea, select {
-  font-size: 16px !important; /* Prevents zoom on Android */
-}
-
-/* Android safe area handling */
-.home-content {
-  padding-bottom: env(safe-area-inset-bottom, 220px);
-}
+/* ---------- Compact Transcript Footer (smaller height) ---------- */
 
 .home-footer {
-  padding-bottom: env(safe-area-inset-bottom, 16px);
+  padding: 0 !important;
 }
 
-/* Better touch targets for Android */
-.mic-button {
-  min-width: 64px;
-  min-height: 64px;
-  touch-action: manipulation;
+/* Reduce the padding inside transcript area */
+.transcript-area {
+  padding: 6px 10px !important;
 }
 
+/* Make transcript card thinner */
+.transcript-card {
+  margin-bottom: 4px !important;
+}
+
+.transcript-box-content {
+  padding: 6px 10px !important;
+}
+
+/* Reduce status indicator spacing */
+.status-indicator {
+  margin-bottom: 4px !important;
+}
+
+/* Smaller processing text */
+.processing-text {
+  font-size: 13px;
+}
+
+/* Compact bottom action bar */
+.bottom-action-bar {
+  padding: 8px 10px !important;
+  gap: 8px !important;
+}
+
+/* Mic button area */
+#mic-btn {
+  width: 62px !important;
+  height: 62px !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.16) !important;
+  font-size: 32px !important;
+}
+
+/* Buttons in footer */
 .footer-action-btn {
-  min-width: 48px;
-  min-height: 48px;
-  touch-action: manipulation;
+  min-width: 80px !important;
+  --padding-start: 6px !important;
+  --padding-end: 6px !important;
 }

@@ -1,10 +1,6 @@
-import { useState } from 'react';
-import {
-  startEdit,
-  cancelEdit,
-  saveEdit,
-} from '../services/itemEditService';
-import { deleteItemByIndex } from '../services/itemOperations';
+import { useState } from "react";
+import { startEdit, cancelEdit } from "../services/itemEditService";
+import { deleteItemByIndex } from "../services/itemOperations";
 
 interface Item {
   name: string;
@@ -20,7 +16,7 @@ export function useItemEdit(
 ) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editFormData, setEditFormData] = useState({
-    name: '',
+    name: "",
     qty: 0,
     price: 0,
   });
@@ -33,13 +29,31 @@ export function useItemEdit(
     cancelEdit(setEditingIndex);
   };
 
-  const handleEditChange = (e: any) => {
-    const { name, value } = e.target;
-    setEditFormData((prev) => ({ ...prev, [name]: value }));
+  // ✅ FIXED — supports new signature
+  const handleEditChange = (field: keyof Item, value: any) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
-  const handleSaveEdit = (index: number) => {
-    saveEdit(index, editFormData, setItems, setEditingIndex, speak);
+  const handleSaveEdit = () => {
+    if (editingIndex === null) return;
+
+    const updated = [...items];
+    updated[editingIndex] = {
+      ...updated[editingIndex],
+      name: editFormData.name ?? updated[editingIndex].name,
+      qty: editFormData.qty ?? updated[editingIndex].qty,
+      price: editFormData.price ?? updated[editingIndex].price,
+      total:
+        (editFormData.qty ?? updated[editingIndex].qty) *
+        (editFormData.price ?? updated[editingIndex].price),
+    };
+
+    setItems(updated);
+    speak("आइटम अपडेट किया गया है।");
+    handleCancelEdit();
   };
 
   const handleDeleteItem = (index: number) => {
