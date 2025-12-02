@@ -2,8 +2,6 @@
 import React from "react";
 import { IonPage, IonContent } from "@ionic/react";
 
-import AppHeader from "../components/AppHeader";
-import LeftMenu from "../components/LeftMenu";
 import ItemsSection from "../components/ItemsSection";
 import TranscriptFooter from "../components/TranscriptFooter";
 
@@ -20,14 +18,8 @@ const Home: React.FC = () => {
         color: "var(--ion-text-color)",
       }}
     >
-      {/* Side Menu */}
-      <LeftMenu
-        onClear={logic.handleClear}
-        onGenerate={logic.handleGeneratePDFWrapper}
-      />
+      
 
-      {/* Header */}
-      <AppHeader title="Vaani AI Billing" />
 
       {/* Main Content */}
       <IonContent
