@@ -33,15 +33,16 @@ const TabLayout: React.FC = () => {
 
   return (
     <>
-
-
       <IonTabs>
-
         {/* Global menu + header (visible on all tabs) */}
         <LeftMenu onClear={noop} onGenerate={noopAsync} />
         <AppHeader title="Vaani AI Billing" />
+
         {/* Give the router outlet the same id that the menu's contentId points to */}
-        <IonRouterOutlet id="main-content">
+        <IonRouterOutlet id="main-content" style={{
+          marginTop: "50px",
+          boxSizing: "border-box",
+        }}>
           {/* Tab pages */}
           <Route exact path="/tabs/bills" component={BillsList} />
           <Route exact path="/tabs/items" component={ItemsDetails} />
@@ -55,14 +56,8 @@ const TabLayout: React.FC = () => {
           </Route>
         </IonRouterOutlet>
 
-        <IonTabBar
-          slot="bottom"
-          className="app-tabbar"
-          style={{
-            borderTop: "1px solid var(--ion-color-step-150)",
-            boxShadow: "0 -2px 8px rgba(0,0,0,0.05)",
-          }}
-        >
+        {/* Use the CSS class for theming instead of inline light-only styles */}
+        <IonTabBar slot="bottom" className="app-tabbar">
           <IonTabButton tab="bills" href="/tabs/bills">
             <IonIcon icon={list} />
             <IonLabel>Bills</IonLabel>
