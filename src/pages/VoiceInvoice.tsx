@@ -11,7 +11,7 @@ const VoiceInvoice: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent fullscreen style={{ padding: 12 }}>
+      <IonContent  style={{ padding: 12 }}>
         <h3 style={{ marginTop: 6 }}>Create Invoice by Voice</h3>
 
         <IonCard>

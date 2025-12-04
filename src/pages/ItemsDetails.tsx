@@ -5,7 +5,7 @@ import ItemContainer from "../components/ItemContainer";
 const ItemsDetails: React.FC = () => {
   return (
     <IonPage>
-      <IonContent className="page-content" fullscreen>
+      <IonContent className="page-content">
         <div style={{ padding: "8px 14px 24px" }}>
           <ItemContainer />
         </div>

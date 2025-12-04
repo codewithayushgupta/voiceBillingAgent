@@ -24,7 +24,6 @@ const Home: React.FC = () => {
       {/* Main Content */}
       <IonContent
         id="main-content"
-        fullscreen
         className="ion-padding home-content"
         style={{
           paddingTop: 12,

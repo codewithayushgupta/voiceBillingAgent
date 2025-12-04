@@ -40,7 +40,7 @@ const Profile: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent className="page-content" fullscreen>
+      <IonContent className="page-content">
         <div style={{ padding: "10px 14px 20px", marginTop:40 }}>
           {/* Profile header card */}
           <IonCard className="app-surface" style={{ borderRadius: 14, marginBottom: 14, padding: 12 }}>
